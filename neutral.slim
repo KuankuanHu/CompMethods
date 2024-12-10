@@ -1,0 +1,92 @@
+initialize() {
+	
+	if (exists("slimgui")) {
+		defineConstant("s", -0.1);	//selection coefficient (deleterious)
+		defineConstant("h", -2);	//dominance coefficient that leads to overdominance (p_eqm = 0.6). 
+											//The more negative h is, the closer p_eqm approaches 0.5.
+		defineConstant("N", 5000); //A sufficiently large effective pop size
+		defineConstant("L", 3e3);	//Window size of ncd
+		defineConstant("location", asInteger(0.5*L));
+		defineConstant("Mu", 1e-7);
+		defineConstant("Rho", 1e-8);
+		defineConstant("G_start", asInteger(10*N));
+		defineConstant("G_check", asInteger(10*N + 300));
+		defineConstant("G_check_end", asInteger(10*N + 4*N));
+		defineConstant("G_end", asInteger(18*N));
+	}
+	
+	initializeSLiMOptions(nucleotideBased=T);
+	initializeSex("A");
+	initializeAncestralNucleotides(randomNucleotides(L));
+	//	initializeMutationRate(Mu);
+	initializeMutationTypeNuc("m1", 0.5, "f", 0.0); // neutral
+	initializeMutationTypeNuc("m2", h, "f", s);   // heterozygote advantageous mutation
+	initializeGenomicElementType("g1", m1, 1.0, mmJukesCantor(Mu));
+	initializeGenomicElement(g1, 0, L-1);
+	initializeRecombinationRate(Rho);
+}
+
+//mutationEffect(m3, p1) {return individual.sex == "F" ? 2-effect else effect;}
+
+1 early() {
+	defineConstant("simID", getSeed());
+	defineConstant("path", "~/Documents/HA_sim_output/");
+	defineConstant("tag", "HA");
+	sim.addSubpop("p1", N);
+}
+
+//end of burn-in
+G_start late() {
+	catn("Introducing allele under SA");
+	sim.outputFull(path + tag + "_begin_" + simID + "_full.txt");
+	target = sample(p1.genomes, 1);
+	AncNuc = target.nucleotides(start=location, end=location);
+	NewNuc = c();
+	for (n in c("A", "T", "C", "G")){
+		if(n != AncNuc){
+			NewNuc = c(NewNuc, n);
+		}
+	}
+	target.addNewDrawnMutation(m2, location, nucleotide = sample(NewNuc, 1));
+}
+
+G_check:G_check_end late() {
+	catn("Generation is " + community.tick);
+	mut = sim.mutationsOfType(m2);
+	if(size(mut) == 1) {
+		if (sim.mutationFrequencies(NULL, mut) > 0.1) {
+			cat(simID + ": ESTABLISHED\n");
+			community.deregisterScriptBlock(self);
+		}
+	}
+	else {
+		cat(simID + ": LOST at " + community.tick + "– RESTARTING with seed " + getSeed() +"\n");
+		sim.outputMutations(mut);
+		sim.readFromPopulationFile(path + tag + "_begin_" + simID + "_full.txt");
+		target = sample(p1.genomes, 1);
+		AncNuc = target.nucleotides(start=location, end=location);
+		NewNuc = c();
+		for (n in c("A", "T", "C", "G")){
+			if(n != AncNuc){
+				NewNuc = c(NewNuc, n);
+			}
+		}
+		catn("Introducing allele under SA");
+		target.addNewDrawnMutation(m2, location, nucleotide = sample(NewNuc, 1));
+	}
+}
+
+
+//60000 late() {
+//	catn("at " + community.tick + " generation:");
+//	catn("m2 in genome: " + sim.countOfMutationsOfType(m2));
+//	catn(sim.mutationFrequencies(NULL, sim.mutationsOfType(m2)));
+//}
+
+G_end late() {
+	catn("at " + community.tick + " generation:");
+	catn("m2 in genome: " + sim.countOfMutationsOfType(m2));
+//	sim.outputFull(path + "results/" + tag + "_end_" + simID + "_full.txt");
+	p1.outputVCFSample(sampleSize = asInteger(100), filePath = path + "results/" + tag + "_end_" + simID + "_full.vcf");
+	//	catn("m2 fixed: " + sum(sim.substitutions.mutationType == m2));
+}
