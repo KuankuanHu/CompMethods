@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Running simulations
+# Running simulations with an HA mutation
 # Parameters used in SLiM
 s = -0.1
 h = -2
@@ -16,9 +16,15 @@ G_end = int(10*N + 8*N)
 G_check = int(10*N + 300)
 G_check_end = int(10*N + 4*N)
 
-nSample = 200 - 2
+nSample = 199
 slim = "/usr/local/bin/slim"
 slim_file = "~/Desktop/HA_trace_allele.slim"
+command = "-d s=" + str(s) + " -d h=" + str(h) + " -d N=" + str(N) + " -d L="+ str(L) + " -d location="+str(location) +" -d Mu="+ str(Mu) +" -d Rho="+ str(Rho) +" -d G_start="+ str(G_start) +" -d G_end="+ str(G_end) +" -d G_check="+ str(G_check) + " -d G_check_end="+ str(G_check_end)
+for i in range(nSample):
+    os.system(slim + " " + command + " " + slim_file)
+
+# Running simulation with only neutral evolution
+neutral_file = "~/Documents/GitHub/CompMethods/neutral.slim"
 command = "-d s=" + str(s) + " -d h=" + str(h) + " -d N=" + str(N) + " -d L="+ str(L) + " -d location="+str(location) +" -d Mu="+ str(Mu) +" -d Rho="+ str(Rho) +" -d G_start="+ str(G_start) +" -d G_end="+ str(G_end) +" -d G_check="+ str(G_check) + " -d G_check_end="+ str(G_check_end)
 for i in range(nSample):
     os.system(slim + " " + command + " " + slim_file)
